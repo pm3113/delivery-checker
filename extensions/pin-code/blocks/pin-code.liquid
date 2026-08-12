@@ -8,6 +8,7 @@
       id="pincode"
       type="text"
       maxlength="6"
+      inputmode="numeric"
       placeholder="Enter 6-digit Pincode"
     >
 
@@ -18,7 +19,11 @@
 
   <br>
 
-  <button class="button button--primary" id="check-btn">
+  <button
+    class="button button--primary"
+    id="check-btn"
+    type="button"
+  >
     Check Delivery
   </button>
 
@@ -30,35 +35,35 @@
 
 <style>
 
-.pincode-checker{
-    border:1px solid #e5e5e5;
-    padding:20px;
-    border-radius:8px;
-    margin-top:20px;
-    background:#fafafa;
+.pincode-checker {
+    border: 1px solid #e5e5e5;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    background: #fafafa;
 }
 
-#result{
-    margin-top:15px;
-    font-size:15px;
-    font-weight:600;
+#result {
+    margin-top: 15px;
+    font-size: 15px;
+    font-weight: 600;
 }
 
-.success{
-    color:green;
+.success {
+    color: green;
 }
 
-.error{
-    color:red;
+.error {
+    color: red;
 }
 
-.loading{
-    color:#444;
+.loading {
+    color: #444;
 }
 
-button:disabled{
-    opacity:0.6;
-    cursor:not-allowed;
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 </style>
@@ -71,13 +76,19 @@ document.addEventListener("DOMContentLoaded", function () {
     const pin = document.getElementById("pincode");
     const result = document.getElementById("result");
 
+    if (!btn || !pin || !result) {
+        return;
+    }
+
     btn.addEventListener("click", async function () {
 
         const pincode = pin.value.trim();
 
         if (!/^\d{6}$/.test(pincode)) {
+
             result.innerHTML =
                 "<span class='error'>Please enter a valid 6-digit pincode.</span>";
+
             return;
         }
 
@@ -90,7 +101,7 @@ document.addEventListener("DOMContentLoaded", function () {
         try {
 
             const response = await fetch(
-                "http://32.198.46.211/api/delivery?pincode=" + pincode
+                "http://32.198.46.211/api/delivery?pincode=" + encodeURIComponent(pincode)
             );
 
             if (!response.ok) {
@@ -131,7 +142,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         } catch (error) {
 
-            console.error(error);
+            console.error("Delivery API error:", error);
 
             result.innerHTML = `
                 <div class="error">
@@ -152,3 +163,11 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 </script>
+
+{% schema %}
+{
+  "name": "Pincode Checker",
+  "target": "section",
+  "settings": []
+}
+{% endschema %}
