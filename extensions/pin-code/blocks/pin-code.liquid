@@ -65,56 +65,63 @@ button:disabled{
 
 <script>
 
-document.addEventListener("DOMContentLoaded",function(){
+document.addEventListener("DOMContentLoaded", function () {
 
-    const btn=document.getElementById("check-btn");
-    const pin=document.getElementById("pincode");
-    const result=document.getElementById("result");
+    const btn = document.getElementById("check-btn");
+    const pin = document.getElementById("pincode");
+    const result = document.getElementById("result");
 
-    btn.addEventListener("click",async function(){
+    btn.addEventListener("click", async function () {
 
-        const pincode=pin.value.trim();
+        const pincode = pin.value.trim();
 
-        if(!/^\d{6}$/.test(pincode)){
-            result.innerHTML="<span class='error'>Please enter a valid 6-digit pincode.</span>";
+        if (!/^\d{6}$/.test(pincode)) {
+            result.innerHTML =
+                "<span class='error'>Please enter a valid 6-digit pincode.</span>";
             return;
         }
 
-        // Disable button
-        btn.disabled=true;
-        btn.innerText="Checking...";
+        btn.disabled = true;
+        btn.innerText = "Checking...";
 
-        result.innerHTML="<span class='loading'>Checking delivery availability...</span>";
+        result.innerHTML =
+            "<span class='loading'>Checking delivery availability...</span>";
 
-        try{
+        try {
 
-            const response=await fetch("https://api.postalpincode.in/pincode/"+pincode);
+            const response = await fetch(
+                "http://32.198.46.211/api/delivery?pincode=" + pincode
+            );
 
-            const data=await response.json();
+            if (!response.ok) {
+                throw new Error("API request failed");
+            }
 
-            if(
-                data[0].Status==="Success" &&
-                data[0].PostOffice &&
-                data[0].PostOffice.length>0
-            ){
+            const data = await response.json();
 
-                const office=data[0].PostOffice[0];
+            if (data.cheapest) {
 
-                result.innerHTML=`
+                result.innerHTML = `
                     <div class="success">
-                        ✅ Serviceable: Delivery available to
-                        <strong>${office.District}, ${office.State}</strong>
+                        ✅ Delivery available
                         <br><br>
-                        <strong>Pincode:</strong> ${office.Pincode}<br>
-                        <strong>District:</strong> ${office.District}<br>
-                        <strong>State:</strong> ${office.State}<br>
-                        <strong>Country:</strong> ${office.Country}
+
+                        <strong>Pincode:</strong> ${data.pincode}<br>
+
+                        <strong>Cheapest Company:</strong>
+                        ${data.cheapest.company}<br>
+
+                        <strong>Delivery Price:</strong>
+                        ₹${data.cheapest.price}<br>
+
+                        <strong>Delivery Time:</strong>
+                        ${data.cheapest.deliveryDays} days
                     </div>
                 `;
 
-            }else{
+            } else {
 
-                result.innerHTML=`
+                result.innerHTML = `
                     <div class="error">
                         ✗ Delivery unavailable for this pincode.
                     </div>
@@ -122,20 +129,21 @@ document.addEventListener("DOMContentLoaded",function(){
 
             }
 
-        }catch(error){
+        } catch (error) {
 
-            result.innerHTML=`
+            console.error(error);
+
+            result.innerHTML = `
                 <div class="error">
                     Unable to check delivery.
-                    Please check your internet connection and try again.
+                    Please try again.
                 </div>
             `;
 
-        }finally{
+        } finally {
 
-            // Enable button again
-            btn.disabled=false;
-            btn.innerText="Check Delivery";
+            btn.disabled = false;
+            btn.innerText = "Check Delivery";
 
         }
 
@@ -144,11 +152,3 @@ document.addEventListener("DOMContentLoaded",function(){
 });
 
 </script>
-
-{% schema %}
-{
-  "name": "Pincode Checker",
-  "target": "section",
-  "settings": []
-}
-{% endschema %}
