@@ -1,6 +1,20 @@
 import { data } from "react-router";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "https://glomore.in",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
 export async function loader({ request }: { request: Request }) {
+  // Handle CORS preflight request
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
+  }
+
   const url = new URL(request.url);
   const pincode = url.searchParams.get("pincode");
 
@@ -12,6 +26,7 @@ export async function loader({ request }: { request: Request }) {
       },
       {
         status: 400,
+        headers: corsHeaders,
       }
     );
   }
@@ -29,6 +44,7 @@ export async function loader({ request }: { request: Request }) {
         },
         {
           status: 502,
+          headers: corsHeaders,
         }
       );
     }
@@ -41,41 +57,56 @@ export async function loader({ request }: { request: Request }) {
       !indiaPostData[0] ||
       indiaPostData[0].Status !== "Success"
     ) {
-      return data({
-        pincode,
-        available: false,
-        message: "Pincode not found",
-      });
+      return data(
+        {
+          pincode,
+          available: false,
+          message: "Pincode not found",
+        },
+        {
+          headers: corsHeaders,
+        }
+      );
     }
 
     const postOfficeData = indiaPostData[0].PostOffice || [];
 
     if (postOfficeData.length === 0) {
-      return data({
-        pincode,
-        available: false,
-        message: "No delivery information found",
-      });
+      return data(
+        {
+          pincode,
+          available: false,
+          message: "No delivery information found",
+        },
+        {
+          headers: corsHeaders,
+        }
+      );
     }
 
     // Get first post office information
     const postOffice = postOfficeData[0];
 
-    return data({
-      pincode,
-      available: true,
-      message: "Delivery available",
-      postOffice: {
-        name: postOffice.Name,
-        branchType: postOffice.BranchType,
-        deliveryStatus: postOffice.DeliveryStatus,
-        district: postOffice.District,
-        division: postOffice.Division,
-        region: postOffice.Region,
-        state: postOffice.State,
-        country: postOffice.Country,
+    return data(
+      {
+        pincode,
+        available: true,
+        message: "Delivery available",
+        postOffice: {
+          name: postOffice.Name,
+          branchType: postOffice.BranchType,
+          deliveryStatus: postOffice.DeliveryStatus,
+          district: postOffice.District,
+          division: postOffice.Division,
+          region: postOffice.Region,
+          state: postOffice.State,
+          country: postOffice.Country,
+        },
       },
-    });
+      {
+        headers: corsHeaders,
+      }
+    );
   } catch (error) {
     console.error("India Post API error:", error);
 
@@ -85,6 +116,7 @@ export async function loader({ request }: { request: Request }) {
       },
       {
         status: 500,
+        headers: corsHeaders,
       }
     );
   }
