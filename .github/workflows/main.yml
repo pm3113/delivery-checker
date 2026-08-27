@@ -1,4 +1,4 @@
-name: Deploy Shopify App and Backend
+name: Build, Deploy Backend and Shopify Extension
 
 on:
   push:
@@ -6,21 +6,15 @@ on:
       - main
 
 jobs:
-  build-push-deploy:
-    name: Build Docker, Push ECR, Deploy EC2, Deploy Shopify
+
+  backend:
+    name: Build and Push Backend Docker Image
     runs-on: ubuntu-latest
 
     steps:
-
-      # --------------------------------------------------
-      # 1. Checkout repository
-      # --------------------------------------------------
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # --------------------------------------------------
-      # 2. Configure AWS credentials
-      # --------------------------------------------------
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -28,77 +22,50 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # --------------------------------------------------
-      # 3. Login to Amazon ECR
-      # --------------------------------------------------
       - name: Login to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # --------------------------------------------------
-      # 4. Build Docker image
-      # --------------------------------------------------
       - name: Build Docker image
         run: |
           docker build -t delivery-checker .
 
-      # --------------------------------------------------
-      # 5. Tag Docker image
-      # --------------------------------------------------
       - name: Tag Docker image
         run: |
           docker tag delivery-checker:latest \
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
 
-      # --------------------------------------------------
-      # 6. Push Docker image to ECR
-      # --------------------------------------------------
-      - name: Push Docker image to ECR
+      - name: Push Docker image
         run: |
           docker push \
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
+          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
 
-      # --------------------------------------------------
-      # 7. Deploy backend to EC2 through SSM
-      # --------------------------------------------------
-      - name: Deploy backend to EC2 via SSM
-        run: |
-          aws ssm send-command \
-            --region ${{ secrets.AWS_REGION }} \
-            --instance-ids ${{ secrets.EC2_INSTANCE_ID }} \
-            --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["/home/ubuntu/deploy.sh"]'
 
-      # --------------------------------------------------
-      # 8. Setup Node.js for Shopify CLI
-      # --------------------------------------------------
+  shopify:
+    name: Deploy Shopify App and Extensions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: 20
 
-      # --------------------------------------------------
-      # 9. Install npm dependencies
-      # --------------------------------------------------
-      - name: Install npm dependencies
-        run: |
-          npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      # --------------------------------------------------
-      # 10. Install Shopify CLI
-      # --------------------------------------------------
       - name: Install Shopify CLI
-        run: |
-          npm install -g @shopify/cli@latest
+        run: npm install -g @shopify/cli@latest
 
-      # --------------------------------------------------
-      # 11. Deploy Shopify app and Theme App Extension
-      # --------------------------------------------------
-      - name: Deploy Shopify app
+      - name: Deploy Shopify App and Extensions
         env:
           SHOPIFY_APP_AUTOMATION_TOKEN: ${{ secrets.SHOPIFY_APP_AUTOMATION_TOKEN }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+
         run: |
           shopify app deploy \
             --config production \
-            --allow-updates
+            --allow-updates \
+            --source-control-url "$COMMIT_URL"
