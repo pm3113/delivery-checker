@@ -1,33 +1,29 @@
 <div class="pincode-checker">
 
-  <h3>Check Delivery Availability</h3>
+  <div class="pincode-header">
+    <h3>Check Delivery Availability</h3>
+    <p>Enter your pincode to check delivery availability.</p>
+  </div>
 
-  <div class="field">
+  <div class="pincode-field">
+    <label for="pincode">Enter 6-digit Pincode</label>
+
     <input
-      class="field__input"
       id="pincode"
       type="text"
       maxlength="6"
       inputmode="numeric"
       placeholder="Enter 6-digit Pincode"
+      autocomplete="postal-code"
     >
-
-    <label class="field__label" for="pincode">
-      Enter 6-digit Pincode
-    </label>
   </div>
 
-  <br>
-
   <button
-    class="button button--primary"
     id="check-btn"
     type="button"
   >
     Check Delivery
   </button>
-
-  <br><br>
 
   <div id="result"></div>
 
@@ -36,39 +32,121 @@
 <style>
 
 .pincode-checker {
+  max-width: 500px;
+  margin: 20px 0;
+  padding: 24px;
   border: 1px solid #e5e5e5;
-  padding: 20px;
-  border-radius: 8px;
-  margin-top: 20px;
-  background: #fafafa;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.pincode-checker h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-}
-
-#result {
-  margin-top: 15px;
-  font-size: 15px;
+.pincode-header h3 {
+  margin: 0 0 6px;
+  font-size: 22px;
   font-weight: 600;
 }
 
+.pincode-header p {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: #666;
+}
+
+.pincode-field {
+  margin-bottom: 14px;
+}
+
+.pincode-field label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pincode-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.pincode-field input:focus {
+  outline: none;
+  border-color: #222;
+}
+
+#check-btn {
+  width: 100%;
+  padding: 13px 18px;
+  border: none;
+  border-radius: 6px;
+  background: #222;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#check-btn:hover {
+  opacity: 0.9;
+}
+
+#check-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#result {
+  margin-top: 20px;
+  font-size: 15px;
+}
+
+.delivery-result {
+  padding: 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.delivery-title {
+  margin-bottom: 14px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.delivery-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 7px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.delivery-row:last-child {
+  border-bottom: none;
+}
+
+.delivery-label {
+  font-weight: 600;
+}
+
+.delivery-value {
+  text-align: right;
+}
+
 .success {
-  color: green;
+  color: #16803c;
 }
 
 .error {
-  color: red;
+  color: #c62828;
 }
 
 .loading {
-  color: #444;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  color: #555;
 }
 
 </style>
@@ -89,31 +167,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const pincode = pin.value.trim();
 
-    // Validate pincode
     if (!/^\d{6}$/.test(pincode)) {
 
       result.innerHTML = `
-        <span class="error">
+        <div class="error">
           Please enter a valid 6-digit pincode.
-        </span>
+        </div>
       `;
 
       return;
     }
 
-    // Disable button
     btn.disabled = true;
     btn.innerText = "Checking...";
 
     result.innerHTML = `
-      <span class="loading">
+      <div class="loading">
         Checking delivery availability...
-      </span>
+      </div>
     `;
 
     try {
 
-      // Call AWS API
       const response = await fetch(
         "https://api.glomore.in/api/delivery?pincode=" +
         encodeURIComponent(pincode)
@@ -127,50 +202,60 @@ document.addEventListener("DOMContentLoaded", function () {
 
       console.log("Pincode API response:", apiData);
 
-      // Delivery available
       if (apiData.available && apiData.postOffice) {
 
         const postOffice = apiData.postOffice;
 
         result.innerHTML = `
-          <div class="success">
+          <div class="delivery-result">
 
-            <strong>Delivery available</strong>
+            <div class="delivery-title success">
+              ✓ Delivery available
+            </div>
 
-            <br><br>
+            <div class="delivery-row">
+              <span class="delivery-label">Pincode</span>
+              <span class="delivery-value">
+                ${apiData.pincode}
+              </span>
+            </div>
 
-            <strong>Pincode:</strong>
-            ${apiData.pincode}
+            <div class="delivery-row">
+              <span class="delivery-label">Post Office</span>
+              <span class="delivery-value">
+                ${postOffice.name}
+              </span>
+            </div>
 
-            <br>
+            <div class="delivery-row">
+              <span class="delivery-label">District</span>
+              <span class="delivery-value">
+                ${postOffice.district}
+              </span>
+            </div>
 
-            <strong>Post Office:</strong>
-            ${postOffice.name}
+            <div class="delivery-row">
+              <span class="delivery-label">State</span>
+              <span class="delivery-value">
+                ${postOffice.state}
+              </span>
+            </div>
 
-            <br>
-
-            <strong>District:</strong>
-            ${postOffice.district}
-
-            <br>
-
-            <strong>State:</strong>
-            ${postOffice.state}
-
-            <br>
-
-            <strong>Delivery Status:</strong>
-            ${postOffice.deliveryStatus}
+            <div class="delivery-row">
+              <span class="delivery-label">Delivery Status</span>
+              <span class="delivery-value">
+                ${postOffice.deliveryStatus}
+              </span>
+            </div>
 
           </div>
         `;
 
       } else {
 
-        // Delivery unavailable
         result.innerHTML = `
           <div class="error">
-            Delivery unavailable for this pincode.
+            ✕ Delivery unavailable for this pincode.
           </div>
         `;
 
@@ -189,7 +274,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     } finally {
 
-      // Enable button again
       btn.disabled = false;
       btn.innerText = "Check Delivery";
 
