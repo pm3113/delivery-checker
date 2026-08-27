@@ -7,13 +7,13 @@ on:
 
 jobs:
   build-push-deploy:
-    name: Build Docker, Push ECR, Deploy EC2
+    name: Build Docker, Push ECR, Deploy EC2, Deploy Shopify
     runs-on: ubuntu-latest
 
     steps:
 
       # --------------------------------------------------
-      # 1. Checkout source code
+      # 1. Checkout repository
       # --------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -59,7 +59,7 @@ jobs:
             ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
 
       # --------------------------------------------------
-      # 7. Deploy Docker application to EC2 through SSM
+      # 7. Deploy backend to EC2 through SSM
       # --------------------------------------------------
       - name: Deploy backend to EC2 via SSM
         run: |
@@ -70,19 +70,20 @@ jobs:
             --parameters 'commands=["/home/ubuntu/deploy.sh"]'
 
       # --------------------------------------------------
-      # 8. Install Node.js for Shopify CLI
+      # 8. Setup Node.js for Shopify CLI
       # --------------------------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       # --------------------------------------------------
       # 9. Install project dependencies
       # --------------------------------------------------
       - name: Install npm dependencies
-        run: |
-          npm ci
+      run: |
+        npm ci
 
       # --------------------------------------------------
       # 10. Install Shopify CLI
@@ -92,14 +93,12 @@ jobs:
           npm install -g @shopify/cli@latest
 
       # --------------------------------------------------
-      # 11. Deploy Shopify app configuration and extensions
+      # 11. Deploy Shopify app and Theme App Extension
       # --------------------------------------------------
       - name: Deploy Shopify app
         env:
           SHOPIFY_APP_AUTOMATION_TOKEN: ${{ secrets.SHOPIFY_APP_AUTOMATION_TOKEN }}
-          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
         run: |
           shopify app deploy \
             --config production \
-            --allow-updates \
-            --source-control-url "$COMMIT_URL"
+            --allow-updates
