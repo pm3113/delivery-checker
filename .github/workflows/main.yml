@@ -7,20 +7,21 @@ on:
 
 jobs:
 
-  # ==========================================
-  # BACKEND CI/CD
-  # ==========================================
-  backend:
-    name: Build and Push Backend Docker Image
+  # ============================================================
+  # JOB 1: BUILD DOCKER IMAGE AND PUSH TO AMAZON ECR
+  # ============================================================
+
+  docker:
+    name: Build and Push Docker Image to ECR
     runs-on: ubuntu-latest
 
     steps:
 
-      # 1. Checkout source code
-      - name: Checkout code
+      # Step 1: Get source code from GitHub
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Configure AWS credentials
+      # Step 2: Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -28,80 +29,60 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # 3. Login to Amazon ECR
+      # Step 3: Login to Amazon ECR
       - name: Login to Amazon ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 4. Build Docker image
+      # Step 4: Build Docker image
       - name: Build Docker image
         run: |
           docker build -t delivery-checker .
 
-      # 5. Tag Docker image
+      # Step 5: Tag Docker image
       - name: Tag Docker image
         run: |
           docker tag delivery-checker:latest \
           ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
 
-      # 6. Push Docker image to ECR
-      - name: Push Docker image
+      # Step 6: Push Docker image to ECR
+      - name: Push Docker image to ECR
         run: |
           docker push \
           ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
 
 
-  # ==========================================
-  # SHOPIFY APP + THEME EXTENSION CI/CD
-  # ==========================================
+  # ============================================================
+  # JOB 2: DEPLOY SHOPIFY APP + THEME EXTENSION
+  # ============================================================
+
   shopify:
-    name: Deploy Shopify App and Extensions
+    name: Deploy Shopify App and Extension
     runs-on: ubuntu-latest
 
     steps:
 
-      # 1. Checkout source code
-      - name: Checkout code
+      # Step 1: Get source code from GitHub
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Setup Node.js 22
+      # Step 2: Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      # 3. Check Node.js version
-      - name: Check Node.js version
-        run: |
-          node --version
-
-      # 4. Check npm version
-      - name: Check npm version
-        run: |
-          npm --version
-
-      # 5. Install project dependencies
+      # Step 3: Install project dependencies
       - name: Install dependencies
-        run: |
-          npm ci
+        run: npm ci
 
-      # 6. Install Shopify CLI
+      # Step 4: Install Shopify CLI
       - name: Install Shopify CLI
-        run: |
-          npm install -g @shopify/cli@latest
+        run: npm install -g @shopify/cli@latest
 
-      # 7. Check Shopify CLI version
-      - name: Check Shopify CLI version
-        run: |
-          shopify version
-
-      # 8. Deploy Shopify App + Theme Extensions
-      - name: Deploy Shopify App and Extensions
+      # Step 5: Deploy Shopify app and extension
+      - name: Deploy Shopify app and extension
         env:
           SHOPIFY_APP_AUTOMATION_TOKEN: ${{ secrets.SHOPIFY_APP_AUTOMATION_TOKEN }}
-          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
-
         run: |
-          shopify app deploy \
-            --config production \
-            --allow-updates \
-            --source-control-url "$COMMIT_URL"
+          shopify app deploy --allow-updates
